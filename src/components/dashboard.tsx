@@ -82,7 +82,7 @@ export const Dashboard = () => {
         <div className={classes.appBarSpacer} />
         <Container maxWidth="lg" className={classes.container}>
           <Grid container spacing={3}>
-            {/* Chart */}
+            {/* Search Input */}
             <Grid item xs={12} md={8} lg={9}>
               <Paper className={fixedHeightPaper}>
                 <Title>Enter city</Title>
@@ -90,7 +90,7 @@ export const Dashboard = () => {
                 <Asynchronous />
               </Paper>
             </Grid>
-            {/* Recent Orders */}
+            {/* Recent cities table */}
             <Grid item xs={12}>
               <Paper className={classes.paper}>
                 <WeatherTable />

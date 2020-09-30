@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from "axios";
 
-import { ICityWeatherResponse } from "../stores/weatherStore";
+import { ICityWeatherResponse } from "./cityWeatherResponse";
 
 interface IWeatherApi {
     getCityWeather: (city: string) => Promise<ICityWeatherResponse>;

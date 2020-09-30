@@ -1,8 +1,13 @@
-import { action, computed, observable } from "mobx";
+import { action, computed, observable, autorun } from "mobx";
 
 import { IBulkCityWeather } from "../api/bulkCities";
+import { ICityWeatherResponse } from "../api/cityWeatherResponse";
 
 class WeatherStore {
+    constructor() {
+        this.retrieveFromCache();
+    }
+
     @observable
     savedCities: ICityWeatherResponse[] = [];
 
@@ -22,7 +27,13 @@ class WeatherStore {
 
     @action
     addCity = (city: ICityWeatherResponse) => {
-        this.savedCities.push(city);
+        city = this.normalizeData(city);
+        const alreadyAddedIdx = this.savedCities.findIndex((x) => x.name === city.name);
+        if(alreadyAddedIdx >= 0) {
+            this.savedCities[alreadyAddedIdx] = city;
+        } else {
+            this.savedCities.push(city);
+        }
     }
 
     @action
@@ -36,21 +47,29 @@ class WeatherStore {
     saveCitiesForSuggestion(cities: IBulkCityWeather[]) {
         this.suggestionCities = cities;
     }
-}
 
-export interface ICityWeatherResponse {
-    name: string;
-    dt: number;
-    main: IMainInfo;
-}
+    saveToCache = (cities: ICityWeatherResponse[]) => {
+        localStorage.setItem('saved_cities', JSON.stringify(cities));
+    }
 
-interface IMainInfo {
-    feels_like: number;
-    humidity: number;
-    pressure: number;
-    temp: number;
-    temp_max: number;
-    temp_min: number;
+    retrieveFromCache = () => {
+        const savedCitiesJson = localStorage.getItem('saved_cities');
+        this.savedCities = savedCitiesJson ?  JSON.parse(savedCitiesJson) : [];
+    }
+
+    private normalizeData = (city: ICityWeatherResponse) => {
+        city.dt = new Date().getTime();
+        city.main.temp = toCelcius(city.main.temp);
+        city.main.temp_max = toCelcius(city.main.temp_max);
+        city.main.temp_min = toCelcius(city.main.temp_min);
+        return city;
+    }
 }
 
 export const weatherStore = new WeatherStore();
+
+autorun(() => {
+    weatherStore.saveToCache(weatherStore.savedCities);
+});
+
+const toCelcius = (kelvin: number) => kelvin - 273.15;
