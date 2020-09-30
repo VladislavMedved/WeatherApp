@@ -1,35 +1,28 @@
-// *https://www.registers.service.gov.uk/registers/country/use-the-api*
-import React from 'react';
+import React, { useEffect } from 'react';
 import TextField from '@material-ui/core/TextField';
-import axios, { AxiosResponse } from "axios";
 import { Autocomplete, AutocompleteInputChangeReason } from '@material-ui/lab';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import { values } from 'mobx';
-import { ICityWeatherResponse, weatherStore } from '../weatherStore';
 
-interface CountryType {
-  name: string;
-}
-
-const GOOGLE_API_KEY = 'AIzaSyD_RkPfxtUD97ij32siaGoKeh3SACqyBW8';
+import data from "../data/weather_14.json";
+import { weatherStore } from '../stores/weatherStore';
+import { IBulkCityWeather } from '../api/bulkCities';
+import { weatherApi } from '../api/weatherApi';
 
 export const Asynchronous = () => {
     const [open, setOpen] = React.useState(false);
-    const [options, setOptions] = React.useState<CountryType[]>([]);
+    const [options, setOptions] = React.useState<IBulkCityWeather[]>([]);
     const [loading, setLoading] = React.useState(false);
 
-    const predictCities = async (input: string) => {
+    useEffect(() => {
+        weatherStore.saveCitiesForSuggestion(data as IBulkCityWeather[]);
+    }, [])
+
+    const suggestCities = async (input: string) => {
         setLoading(true);
 
-        const response= await axios({
-            method: 'get',
-            url: `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&types=(cities)&language=en_GB&key=${GOOGLE_API_KEY}`,
-            responseType: 'json',
-            headers: {'Access-Control-Allow-Origin': '*', // * или ваш домен
-            'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE',
-            'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept'},
-        });
-        setOptions( response.data.predictions );
+        const suggestions = weatherStore.suggestionCities.filter(x => x.city.name.toLowerCase().indexOf(input.toLowerCase()) !== -1);
+        setOptions(suggestions);
+
         setLoading(false);
     };
 
@@ -38,9 +31,21 @@ export const Asynchronous = () => {
         reason: AutocompleteInputChangeReason
     ) => {
         if (value && value.length >= 3) {
-            predictCities(value);
+            suggestCities(value);
         }
     }
+
+    const onChange =  async (
+        event: React.ChangeEvent<{}>,
+        value: IBulkCityWeather | null,
+        reason: any,
+        details?: any,
+      ) => {
+          if (value?.city.name) {
+            var weather = await weatherApi.getCityWeather(value?.city.name);
+            weatherStore.addCity(weather);
+          }
+      }
 
     React.useEffect(() => {
         if (!open) {
@@ -53,7 +58,7 @@ export const Asynchronous = () => {
             id="asynchronous-demo"
             style={{ width: 300 }}
             open={open}
-            onChange={(e) => {e.preventDefault()}}
+            onChange={onChange}
             onInputChange={onInputChange}
             onOpen={() => {
                 setOpen(true);
@@ -61,8 +66,8 @@ export const Asynchronous = () => {
             onClose={() => {
                 setOpen(false);
             }}
-            getOptionSelected={(option, value) => option.name === value.name}
-            getOptionLabel={(option) => option.name}
+            getOptionSelected={(option, value) => option.city.name === value.city.name}
+            getOptionLabel={(option) => option.city.name}
             options={options}
             loading={loading}
             renderInput={(params) => (
@@ -73,10 +78,10 @@ export const Asynchronous = () => {
                     InputProps={{
                         ...params.InputProps,
                         endAdornment: (
-                        <React.Fragment>
-                            {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                            {params.InputProps.endAdornment}
-                        </React.Fragment>
+                            <>
+                                {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                            </>
                         ),
                     }}
                 />
